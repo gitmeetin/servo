@@ -30,3 +30,17 @@ functions:
       - http: path
         path: users
         method: post
+
+  createUser:
+    handler: createUser
+    events:
+      - http: path
+        path: users
+        method: post
+
+  getUser:
+    handler: getUser
+    events:
+      - http: path
+        path: users
+        method: get

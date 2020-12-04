@@ -10,7 +10,8 @@ const { USERNAME, PASSWORD } = process.env;
 if (!USERNAME) throw new Error("Environment variable USERNAME not set");
 if (!PASSWORD) throw new Error("Environment variable PASSWORD not set");
 
-console.log(USERNAME, PASSWORD);
+// Docs and references
+// https://cassandra.apache.org/doc/latest/cql/ddl.html#create-table
 
 // useful for determining container re-use
 const myuuid = cassandra.types.TimeUuid.now();
@@ -26,18 +27,22 @@ client.on("log", (level, loggerName, message, furtherInfo) => {
 });
 
 exports.createSchema = async (req, res) => {
+  if (req.method !== "POST") {
+    return res.status(500).json({ body: "Error: Requested method not found!" });
+  }
+
   const table = "users";
   const keyspace = "gitmeet";
 
   const createTable =
     `CREATE TABLE IF NOT EXISTS ${keyspace}.${table} (id text,
-                                                      name text,
-                                                      username text,
-                                                      schedules list<text>,
-                                                      liked_projects list<text>,
-                                                      personal_projects list<text>,
-                                                      auth_token text,
-                                                      created_at timestamp, ` + `PRIMARY KEY (id, username))`;
+    name text,
+    username text,
+    schedules list<text>,
+    liked_projects list<text>,
+    personal_projects list<text>,
+    auth_token text,
+    created_at timestamp, ` + `PRIMARY KEY (id, username))`;
 
   try {
     await client.execute(createTable);
@@ -48,29 +53,29 @@ exports.createSchema = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-    return res
-      .status(400)
-      .json({ body: "Error: Table and Keyspace could not be created!" });
+    return res.status(500).json({ body: "Error: Table could not be created!" });
   }
 };
 
-exports.getSingle = async (req, res) => {
+exports.getUser = async (req, res) => {
+  if (req.method !== "GET") {
+    return res.status(500).json({ body: "Error: Requested method not found!" });
+  }
+
   const { userId } = req.body;
 
   const params = [userId];
 
   try {
-    const getUser = `
-    SELECT 
+    const getUser = `SELECT 
       id as userId,
       name,
       username,
       schedules,
       liked_projects AS likedProjects,
       personal_projects as personalProjects,
-      token,
-      created_at as createdAt FROM users WHERE id=${userId}
-    `;
+      auth_token as authToken,
+      created_at as createdAt FROM users WHERE id=${userId}`;
 
     const result = await client.execute(getUser, params, {
       prepare: true,
@@ -81,7 +86,7 @@ exports.getSingle = async (req, res) => {
       schedules,
       likedProjects,
       personalProjects,
-      token,
+      authToken,
       createdAt,
     } = result.first();
 
@@ -94,7 +99,7 @@ exports.getSingle = async (req, res) => {
         schedules,
         likedProjects,
         personalProjects,
-        token,
+        authToken,
         createdAt,
       },
     });
@@ -106,16 +111,68 @@ exports.getSingle = async (req, res) => {
   }
 };
 
-//Ensure all queries are executed before exit
-function execute(query, params, callback) {
-  return new Promise((resolve, reject) => {
-    client.execute(query, params, (err, result) => {
-      if (err) {
-        reject();
-      } else {
-        callback(err, result);
-        resolve();
-      }
+exports.createUser = async (req, res) => {
+  if (req.method !== "POST") {
+    return res.status(500).json({ body: "Error: Requested method not found!" });
+  }
+
+  const table = "users";
+  const keyspace = "gitmeet";
+
+  const createUser = `INSERT INTO IF NOT EXISTS ${keyspace}.${table} (id, 
+    name,
+    username,
+    schedules,
+    liked_projects,
+    personal_projects,
+    auth_token,
+    created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+
+  try {
+    const { name, username, personalProjects, authToken } = req.body;
+
+    if (!name || !username || !personalProjects || !authToken) {
+      return res.status(400).json({
+        body: `Error: Required fields are missing. User not created!`,
+      });
+    }
+
+    const userId = v4();
+    const createdAt = new Date();
+
+    const params = [
+      userId,
+      name,
+      username,
+      [],
+      [],
+      personalProjects,
+      authToken,
+      createdAt,
+    ];
+
+    await client.execute(createUser, params, {
+      prepare: true,
+      isIdempotent: true,
     });
-  });
-}
+
+    res.status(200).json({
+      success: true,
+      body: {
+        userId,
+        name,
+        username,
+        schedules: [],
+        likedProjects: [],
+        personalProjects,
+        authToken,
+        createdAt,
+      },
+    });
+  } catch (err) {
+    console.log(error);
+    return res
+      .status(500)
+      .json({ body: `Error: Something went wrong. User not registered!` });
+  }
+};
