@@ -9,8 +9,8 @@ provider:
   stage: dev
   runtime: nodejs12
   region: asia-south1
-  project: shark-hacks
-  credentials: ~/.gcloud/keyfile-shark-hacks.json
+  project: shark-hacks-297613
+  credentials: ~/.gcloud/sharkhackskeyfile.json
 
 frameworkVersion: "2"
 
@@ -24,23 +24,9 @@ package:
     - .git/**
 
 functions:
-  create:
-    handler: create
+  createSchema:
+    handler: createSchema
     events:
       - http: path
         path: users
         method: post
-
-  all:
-    handler: all
-    events:
-      - http: path
-        path: users
-        method: get
-
-  single:
-    handler: single
-    events:
-      - http: path
-        path: users
-        method: get

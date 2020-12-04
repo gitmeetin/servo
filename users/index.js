@@ -10,7 +10,7 @@ const { USERNAME, PASSWORD } = process.env;
 if (!USERNAME) throw new Error("Environment variable USERNAME not set");
 if (!PASSWORD) throw new Error("Environment variable PASSWORD not set");
 
-const keyspace = "gitmeet";
+console.log(USERNAME, PASSWORD);
 
 // useful for determining container re-use
 const myuuid = cassandra.types.TimeUuid.now();
@@ -18,7 +18,7 @@ console.log("timeuuid in container startup: " + myuuid);
 
 const client = new cassandra.Client({
   cloud: { secureConnectBundle: "../secure-connect-gitmeet.zip" },
-  credentials: { USERNAME, PASSWORD },
+  credentials: { username: USERNAME, password: PASSWORD },
 });
 
 client.on("log", (level, loggerName, message, furtherInfo) => {
@@ -29,23 +29,17 @@ exports.createSchema = async (req, res) => {
   const table = "users";
   const keyspace = "gitmeet";
 
-  const createKeyspace = `CREATE KEYSPACE IF NOT EXISTS ${keyspace} `;
-
   const createTable =
-    `
-  CREATE TABLE IF NOT EXISTS ${keyspace}.${table} (
-    id text,
-    name text,
-    username text,
-    schedules list,
-    liked_projects list,
-    personal_projects list,
-    token text,
-    created_at timestamp,
-  ` + ` PRIMARY KEY (id, username)`;
+    `CREATE TABLE IF NOT EXISTS ${keyspace}.${table} (id text,
+                                                      name text,
+                                                      username text,
+                                                      schedules list<text>,
+                                                      liked_projects list<text>,
+                                                      personal_projects list<text>,
+                                                      auth_token text,
+                                                      created_at timestamp, ` + `PRIMARY KEY (id, username))`;
 
   try {
-    await client.execute(createKeyspace);
     await client.execute(createTable);
 
     res.status(200).json({
@@ -60,8 +54,10 @@ exports.createSchema = async (req, res) => {
   }
 };
 
-exports.getUser = async (req, res) => {
+exports.getSingle = async (req, res) => {
   const { userId } = req.body;
+
+  const params = [userId];
 
   try {
     const getUser = `
@@ -75,7 +71,39 @@ exports.getUser = async (req, res) => {
       token,
       created_at as createdAt FROM users WHERE id=${userId}
     `;
-  } catch (err) {}
+
+    const result = await client.execute(getUser, params, {
+      prepare: true,
+    });
+    const {
+      name,
+      username,
+      schedules,
+      likedProjects,
+      personalProjects,
+      token,
+      createdAt,
+    } = result.first();
+
+    res.status(200).json({
+      success: true,
+      body: {
+        userId,
+        name,
+        username,
+        schedules,
+        likedProjects,
+        personalProjects,
+        token,
+        createdAt,
+      },
+    });
+  } catch (err) {
+    console.log(error);
+    return res
+      .status(400)
+      .json({ body: `Error: UserId ${userId} could not be found!` });
+  }
 };
 
 //Ensure all queries are executed before exit
