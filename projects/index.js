@@ -68,7 +68,7 @@ exports.createSchema = async (req, res) => {
  * @param {import("express").Response} res HTTP response context.
  */
 exports.getProject = (req, res) => {
-  const projectID = req.params.id;
+  const projectID = req.params[0];
 
   if (req.method !== 'GET') {
     return res.status(404).json({ message: 'Error: Requested method not found!' });
@@ -91,7 +91,7 @@ exports.getProject = (req, res) => {
  * @param {import("express").Response} res HTTP response context.
  */
 exports.deleteProject = (req, res) => {
-  const projectID = req.params.id;
+  const projectID = req.params[0];
 
   if (req.method !== 'POST') {
     return res.status(404).json({ message: 'Error: Requested method not found!' });
@@ -118,7 +118,7 @@ exports.editProject = (req, res) => {
    * Since this requires integration with github API and we also need the user's PAT, the code below
    * is just mock on how the logic will be
    */
-  const projectID = req.params.id;
+  const projectID = req.params[0];
 
   if (req.method !== 'POST') {
     return res.status(404).json({ message: 'Error: Requested method not found!' });
