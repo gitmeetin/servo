@@ -27,6 +27,8 @@ client.on("log", (level, loggerName, message, furtherInfo) => {
 });
 
 exports.createSchema = async (req, res) => {
+  console.log("timeuuid in createSchema: " + myuuid);
+
   if (req.method !== "POST") {
     return res.status(500).json({ body: "Error: Requested method not found!" });
   }
@@ -58,11 +60,13 @@ exports.createSchema = async (req, res) => {
 };
 
 exports.getUser = async (req, res) => {
+  console.log("timeuuid in getUser: " + myuuid);
+
   if (req.method !== "GET") {
     return res.status(500).json({ body: "Error: Requested method not found!" });
   }
 
-  const { userId } = req.body;
+  const userId = req.params.id;
 
   const params = [userId];
 
@@ -112,6 +116,8 @@ exports.getUser = async (req, res) => {
 };
 
 exports.createUser = async (req, res) => {
+  console.log("timeuuid in createUser: " + myuuid);
+
   if (req.method !== "POST") {
     return res.status(500).json({ body: "Error: Requested method not found!" });
   }
