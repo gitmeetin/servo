@@ -77,7 +77,7 @@ exports.getProject = (req, res) => {
   try {
     const selectQuery = `SELECT 
     id, name, author, readme, location, tags, repo_id, repo_link FROM ${DATABASE}.projects WHERE id = ?`;
-    const projectDetails = (await client.execute(selectQuery, { id: projectID }, { prepare: true })).first();
+    const projectDetails = (await client.execute(selectQuery, [projectID], { prepare: true })).first();
 
     return res.json({ body: projectDetails });
   } catch (_) {
@@ -91,7 +91,19 @@ exports.getProject = (req, res) => {
  * @param {import("express").Response} res HTTP response context.
  */
 exports.deleteProject = (req, res) => {
+  const projectID = req.params.id;
 
+  if (req.method !== 'POST') {
+    return res.status(404).json({ message: 'Error: Requested method not found!' });
+  }
+
+  try {
+    const deleteQuery = `DELETE FROM ${DATABASE}.projects WHERE id = ?`;
+    await client.execute(deleteQuery, [projectID], { prepare: true });
+  } catch (_) {
+    console.error(_);
+    return res.status(404).json({ message: `Error: Could not find and delete a project with ID ${projectID}`});
+  }
 };
 
 /**
