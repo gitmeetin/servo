@@ -1,5 +1,4 @@
-const { v4 } = require('uuid');
-const { Client, TimeUuid } = require('cassandra-driver');
+const { Client, TimeUuid, mapping: { Mapper } } = require('cassandra-driver');
 
 const { USERNAME, PASSWORD, DATABASE } = process.env;
 
@@ -15,6 +14,14 @@ const client = new Client({
   credentials: { username: USERNAME, password: PASSWORD },
 });
 
+const mapper = new Mapper(client, {
+  models: {
+    User: { tables: ['users'], keyspace: 'gitmeet' },
+    Project: { tables: ['projects'], keyspace: 'gitmeet' },
+    Meeting: { tables: ['meetings'], keyspace: 'gitmeet' },
+  },
+});
+
 client.on('log', (level, loggerName, message, furtherInfo) => {
   console.log(`${level} - ${loggerName}:  ${message}`);
 });
@@ -25,13 +32,12 @@ client.on('log', (level, loggerName, message, furtherInfo) => {
  */
 exports.createSchema = async (req, res) => {
   if (req.method !== 'POST') {
-    return res.status(404).json({ message: 'Error: Requested method not found!' });
+    return res.status(404).json({ message: 'Requested method not found!' });
   }
 
   const createTable = `
     CREATE TYPE swipes (
       swipedBy text,
-      swipedUser text,
       liked boolean
     )
 
@@ -58,7 +64,7 @@ exports.createSchema = async (req, res) => {
   } catch (_) {
     console.error(_);
     return res.status(500).json({
-      message: `Error: ${DATABASE}.projects couldn't be created`
+      message: `${DATABASE}.projects couldn't be created`
     });
   }
 };
@@ -71,7 +77,7 @@ exports.getProject = (req, res) => {
   const projectID = req.params[0];
 
   if (req.method !== 'GET') {
-    return res.status(404).json({ message: 'Error: Requested method not found!' });
+    return res.status(404).json({ message: 'Requested method not found!' });
   }
 
   try {
@@ -82,7 +88,7 @@ exports.getProject = (req, res) => {
     return res.json({ body: projectDetails });
   } catch (_) {
     console.error(_);
-    return res.status(404).json({ message: `Error: Could not find project with ID ${projectID}` })
+    return res.status(404).json({ message: `Could not find project with ID ${projectID}` })
   }
 };
 
@@ -94,7 +100,7 @@ exports.deleteProject = (req, res) => {
   const projectID = req.params[0];
 
   if (req.method !== 'POST') {
-    return res.status(404).json({ message: 'Error: Requested method not found!' });
+    return res.status(404).json({ message: 'Requested method not found!' });
   }
 
   try {
@@ -102,7 +108,7 @@ exports.deleteProject = (req, res) => {
     await client.execute(deleteQuery, [projectID], { prepare: true });
   } catch (_) {
     console.error(_);
-    return res.status(404).json({ message: `Error: Could not find and delete a project with ID ${projectID}`});
+    return res.status(404).json({ message: `Could not find and delete a project with ID ${projectID}`});
   }
 };
 
@@ -121,7 +127,7 @@ exports.editProject = (req, res) => {
   const projectID = req.params[0];
 
   if (req.method !== 'POST') {
-    return res.status(404).json({ message: 'Error: Requested method not found!' });
+    return res.status(404).json({ message: 'Requested method not found!' });
   }
 
   // Mock starts here
@@ -133,7 +139,7 @@ exports.editProject = (req, res) => {
     return res.json({ message: 'Refreshed project details successfully' });
   } catch (_) {
     console.error(_);
-    return res.status(404).json({ message: 'Error: Access denied trying to access the repository in github' });
+    return res.status(404).json({ message: 'Access denied trying to access the repository in github' });
   }
 };
 
@@ -142,5 +148,35 @@ exports.editProject = (req, res) => {
  * @param {import("express").Response} res HTTP response context.
  */
 exports.swipeProject = (req, res) => {
+  const projectID = req.params[0];
+  const { liked , user_id } = req.body;
 
+  const projectMapper = mapper.forModel('Project');
+
+  if (req.method !== 'POST') {
+    return res.status(404).json({ message: 'Requested method not found!' });
+  }
+
+  if (!liked) return res.status(404).json({ message: 'Liked status not specified' });
+  if (!user_id) return res.status(404).json({ message: 'user_id not specified' });
+
+  try {
+    const countResult = await projectMapper.findAll({ id: projectID });
+    if (countResult.length === 0) return res.status(404).json({ message: 'Project not found' });
+  
+    await projectMapper.update({
+      id: projectID,
+      swipes: [
+        {
+          swipedBy: user_id,
+          liked
+        }
+      ]
+    });
+
+    return res.json({ message: 'Swipe has been saved successfully!'});
+  } catch (_) {
+    console.error(_);
+    return res.status(500).json({ message: 'Something really unexpected happened. Is it all because of 2020?' });
+  }
 };
