@@ -99,5 +99,15 @@ exports.deleteMeeting = (req, res) => {
     return res.status(404).json({ message: 'Requested method not found!' });
   }
 
-  //
+  const meetingID = req.params[0];
+
+  try {
+    const deleteQuery = `DELETE FROM ${DATABASE}.meetings WHERE id = ?`;
+    await client.execute(deleteQuery, [meetingID], { prepare: true });
+
+    return res.json({ message: 'Deleted the meeting' });
+  } catch (_) {
+    console.error(_);
+    return res.status(404).json({ message: 'Could not find the meeting to delete' });
+  }
 };
