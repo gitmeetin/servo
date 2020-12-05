@@ -84,50 +84,60 @@ exports.getUser = async (req, res) => {
     return res.status(404).json({ body: "Error: Requested method not found!" });
   }
 
-  const userId = req.params.id;
+  const table = "users";
+  const keyspace = "gitmeet";
 
-  const params = [userId];
+  const userId = req.params[0];
+
+  if (!userId) {
+    return res.status(400).json({
+      body: `Error: Required fields are missing. UserId not found!`,
+    });
+  }
+
+  const params = [userId.toString()];
 
   try {
-    const getUser = `UPDATE users
-      SET 
+    const getUser = `SELECT
       id as userId,
-      name,
-      username,
-      schedules,
-      liked_projects AS likedProjects,
+      liked_projects as likedProjects,
       personal_projects as personalProjects,
       auth_token as authToken,
-      created_at as createdAt FROM users WHERE id=${userId}`;
+      created_at as createdAt,
+      name,
+      username,
+      schedules FROM ${keyspace}.${table} WHERE id=?`;
 
     const result = await client.execute(getUser, params, {
       prepare: true,
     });
+
     const {
+      userid,
       name,
       username,
       schedules,
-      likedProjects,
-      personalProjects,
-      authToken,
-      createdAt,
+      likedprojects,
+      personalprojects,
+      authtoken,
+      createdat,
     } = result.first();
 
     res.json({
       success: true,
       body: {
-        userId,
+        userId: userid,
         name,
         username,
         schedules,
-        likedProjects,
-        personalProjects,
-        authToken,
-        createdAt,
+        likedProjects: likedprojects,
+        personalProjects: personalprojects,
+        authToken: authtoken,
+        createdAt: createdat,
       },
     });
   } catch (err) {
-    console.log(error);
+    console.log(err);
     return res
       .status(404)
       .json({ body: `Error: UserId ${userId} could not be found!` });
@@ -231,36 +241,53 @@ exports.editUser = async (req, res) => {
   const userMapper = mapper.forModel("User");
 
   try {
-    const { userId, schedule, likedProject, personalProject, token } = req.body;
+    const { userId, schedule, likedProject, personalProject } = req.body;
 
-    if (!name || !username || !personalProjects || !authToken) {
+    if (!userId || (!schedule && !personalProject && !likedProject)) {
       return res.status(400).json({
-        body: `Error: Required fields are missing. User not created!`,
+        body: `Error: Update fields are missing. User not updated!`,
       });
     }
 
-    const oldUser = await userMapper.get({ id: userId });
+    const oldUsers = await userMapper.findAll({ id: userId });
 
-    if (!oldUser) {
+    if (oldUsers.length === 0) {
       return res.status(400).json({
         body: `Error: User not found!`,
       });
     }
 
-    const doc = await userMapper.update({
+    const oldUser = oldUsers.first();
+
+    console.log(oldUser);
+
+    const newSchedules = oldUser.schedules || [];
+    const likedProjects = oldUser.liked_projects || [];
+    const personalProjects = oldUser.personal_projects || [];
+
+    if (schedule) newSchedules.push(schedule);
+    if (likedProject) likedProjects.push(likedProject);
+    if (personalProject) personalProjects.push(personalProject);
+
+    console.log(newSchedules, likedProjects, personalProjects);
+
+    await userMapper.update({
       id: userId,
-      schedules: [...oldUser.schedules, schedule],
-      liked_projects: [...oldUser.liked_projects, likedProject],
-      personal_projects: [...oldUser.personal_projects, personalProject],
-      auth_token: token,
+      username: oldUser.username,
+      name: oldUser.name,
+      schedules: newSchedules,
+      liked_projects: likedProjects,
+      personal_projects: personalProjects,
+      auth_token: oldUser.auth_token,
+      created_at: oldUser.created_at,
     });
 
     res.json({
       success: true,
-      body: doc,
+      body: "User details updated!",
     });
   } catch (err) {
-    console.log(error);
+    console.log(err);
     return res
       .status(500)
       .json({ body: `Error: Something went wrong. User details not updated!` });
