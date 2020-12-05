@@ -9,6 +9,7 @@
   "author": "Saurav M. H",
   "license": "MIT",
   "devDependencies": {
+    "@google-cloud/functions-framework": "^1.7.1",
     "serverless-google-cloudfunctions": "*"
   },
   "dependencies": {
