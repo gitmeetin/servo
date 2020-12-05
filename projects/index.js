@@ -25,7 +25,7 @@ client.on('log', (level, loggerName, message, furtherInfo) => {
  */
 exports.createSchema = async (req, res) => {
   if (req.method !== 'POST') {
-    return res.status(400).json({ message: 'Error: Requested method not found!' });
+    return res.status(404).json({ message: 'Error: Requested method not found!' });
   }
 
   const createTable = `
@@ -61,4 +61,51 @@ exports.createSchema = async (req, res) => {
       message: `Error: ${DATABASE}.projects couldn't be created`
     });
   }
+};
+
+/**
+ * @param {import("express").Request} req HTTP request context.
+ * @param {import("express").Response} res HTTP response context.
+ */
+exports.getProject = (req, res) => {
+  const projectID = req.params.id;
+
+  if (req.method !== 'GET') {
+    return res.status(404).json({ message: 'Error: Requested method not found!' });
+  }
+
+  try {
+    const selectQuery = `SELECT 
+    id, name, author, readme, location, tags, repo_id, repo_link FROM ${DATABASE}.projects WHERE id = ?`;
+    const projectDetails = (await client.execute(selectQuery, { id: projectID }, { prepare: true })).first();
+
+    return res.json({ body: projectDetails });
+  } catch (_) {
+    console.error(_);
+    return res.status(404).json({ message: `Error: Could not find project with ID ${projectID}` })
+  }
+};
+
+/**
+ * @param {import("express").Request} req HTTP request context.
+ * @param {import("express").Response} res HTTP response context.
+ */
+exports.deleteProject = (req, res) => {
+
+};
+
+/**
+ * @param {import("express").Request} req HTTP request context.
+ * @param {import("express").Response} res HTTP response context.
+ */
+exports.editProject = (req, res) => {
+
+};
+
+/**
+ * @param {import("express").Request} req HTTP request context.
+ * @param {import("express").Response} res HTTP response context.
+ */
+exports.swipeProject = (req, res) => {
+
 };

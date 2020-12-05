@@ -44,7 +44,7 @@ exports.createSchema = async (req, res) => {
   console.log("timeuuid in createSchema: " + myuuid);
 
   if (req.method !== "POST") {
-    return res.status(500).json({ body: "Error: Requested method not found!" });
+    return res.status(404).json({ body: "Error: Requested method not found!" });
   }
 
   const table = "users";
@@ -63,7 +63,7 @@ exports.createSchema = async (req, res) => {
   try {
     await client.execute(createTable);
 
-    res.status(200).json({
+    res.json({
       success: true,
       body: `Successfully created ${keyspace}.${table} schema`,
     });
@@ -81,7 +81,7 @@ exports.getUser = async (req, res) => {
   console.log("timeuuid in getUser: " + myuuid);
 
   if (req.method !== "GET") {
-    return res.status(500).json({ body: "Error: Requested method not found!" });
+    return res.status(404).json({ body: "Error: Requested method not found!" });
   }
 
   const userId = req.params.id;
@@ -113,7 +113,7 @@ exports.getUser = async (req, res) => {
       createdAt,
     } = result.first();
 
-    res.status(200).json({
+    res.json({
       success: true,
       body: {
         userId,
@@ -129,7 +129,7 @@ exports.getUser = async (req, res) => {
   } catch (err) {
     console.log(error);
     return res
-      .status(400)
+      .status(404)
       .json({ body: `Error: UserId ${userId} could not be found!` });
   }
 };
@@ -142,7 +142,7 @@ exports.createUser = async (req, res) => {
   console.log("timeuuid in createUser: " + myuuid);
 
   if (req.method !== "POST") {
-    return res.status(500).json({ body: "Error: Requested method not found!" });
+    return res.status(404).json({ body: "Error: Requested method not found!" });
   }
 
   const userMapper = mapper.forModel("User");
@@ -196,7 +196,7 @@ exports.createUser = async (req, res) => {
       isIdempotent: true,
     });
 
-    res.status(200).json({
+    res.json({
       success: true,
       body: {
         userId,
@@ -225,7 +225,7 @@ exports.editUser = async (req, res) => {
   console.log("timeuuid in editUser: " + myuuid);
 
   if (req.method !== "POST") {
-    return res.status(500).json({ body: "Error: Requested method not found!" });
+    return res.status(404).json({ body: "Error: Requested method not found!" });
   }
 
   const userMapper = mapper.forModel("User");
@@ -255,7 +255,7 @@ exports.editUser = async (req, res) => {
       auth_token: token,
     });
 
-    res.status(200).json({
+    res.json({
       success: true,
       body: doc,
     });
