@@ -1,0 +1,50 @@
+service: gitmeet-api-meetings
+
+useDotenv: true
+
+provider:
+  name: google
+  labels:
+    application: gitmeet-meetings-api
+  stage: dev
+  runtime: nodejs12
+  region: asia-south1
+  project: shark-hacks-297613
+  credentials: ~/.gcloud/sharkhackskeyfile.json
+
+frameworkVersion: "2"
+
+plugins:
+  - serverless-google-cloudfunctions
+
+package:
+  exclude:
+    - node_modules/**
+    - .gitignore
+    - .git/**
+
+functions:
+  createSchema:
+    handler: createSchema
+    events:
+      - http: path
+        path: meetings
+        method: post
+  getMeeting:
+    handler: getMeeting
+    events:
+      - http: path
+        path: meetings
+        method: get
+  deleteMeeting:
+    handler: deleteMeeting
+    events:
+      - http: path
+        path: meetings
+        method: post
+  createMeeting:
+    handler: createMeeting
+    events:
+      - http: path
+        path: meetings
+        method: post
