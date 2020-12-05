@@ -35,7 +35,25 @@ exports.createSchema = (req, res) => {
     return res.status(404).json({ message: 'Requested method not found!' });
   }
 
-  //
+  const createSchema = `
+    CREATE TABLE IF NOT EXISTS ${DATABASE}.meetings (
+      id text,
+      owner text,
+      liker text,
+      link text,
+      time TIMESTAMP,
+      PRIMARY KEY (id)
+    )
+  `;
+
+  try {
+    await client.execute(createSchema);
+
+    return res.json({ message: 'Created meetings schema' });
+  } catch (_) {
+    console.error(_);
+    return res.status(500).json({ message: 'Could not create meetings schema' });
+  }
 };
 
 /**
