@@ -30,9 +30,9 @@ client.on("log", (level, loggerName, message, furtherInfo) => {
 
 const mapper = new Mapper(client, {
   models: {
-    User: { tables: ["users"] },
-    Project: { tables: ["projects"] },
-    Meeting: { tables: ["meetings"] },
+    User: { tables: ["users"], keyspace: "gitmeet" },
+    Project: { tables: ["projects"], keyspace: "gitmeet" },
+    Meeting: { tables: ["meetings"], keyspace: "gitmeet" },
   },
 });
 
@@ -145,17 +145,20 @@ exports.createUser = async (req, res) => {
     return res.status(500).json({ body: "Error: Requested method not found!" });
   }
 
+  const userMapper = mapper.forModel("User");
+
   const table = "users";
   const keyspace = "gitmeet";
 
-  const createUser = `INSERT INTO IF NOT EXISTS ${keyspace}.${table} (id, 
+  const createUser =
+    `INSERT INTO ${keyspace}.${table} (id, 
     name,
     username,
     schedules,
     liked_projects,
     personal_projects,
     auth_token,
-    created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+    created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)` + ` IF NOT EXISTS`;
 
   try {
     const { name, username, personalProjects, authToken } = req.body;
@@ -163,6 +166,14 @@ exports.createUser = async (req, res) => {
     if (!name || !username || !personalProjects || !authToken) {
       return res.status(400).json({
         body: `Error: Required fields are missing. User not created!`,
+      });
+    }
+
+    const oldUsers = await userMapper.findAll({ username });
+
+    if (oldUsers.length > 0) {
+      return res.status(400).json({
+        body: `Error: User already exists with username - ${username}. New User not created!`,
       });
     }
 
@@ -199,7 +210,7 @@ exports.createUser = async (req, res) => {
       },
     });
   } catch (err) {
-    console.log(error);
+    console.log(err);
     return res
       .status(500)
       .json({ body: `Error: Something went wrong. User not registered!` });
@@ -217,22 +228,10 @@ exports.editUser = async (req, res) => {
     return res.status(500).json({ body: "Error: Requested method not found!" });
   }
 
-  const table = "users";
-  const keyspace = "gitmeet";
   const userMapper = mapper.forModel("User");
 
-
-  const editUser = `INSERT INTO IF NOT EXISTS ${keyspace}.${table} (id, 
-    name,
-    username,
-    schedules,
-    liked_projects,
-    personal_projects,
-    auth_token,
-    created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-
   try {
-    const { name, username, personalProjects, authToken } = req.body;
+    const { userId, schedule, likedProject, personalProject, token } = req.body;
 
     if (!name || !username || !personalProjects || !authToken) {
       return res.status(400).json({
@@ -240,42 +239,30 @@ exports.editUser = async (req, res) => {
       });
     }
 
-    const userId = v4();
-    const createdAt = new Date();
+    const oldUser = await userMapper.get({ id: userId });
 
-    const params = [
-      userId,
-      name,
-      username,
-      [],
-      [],
-      personalProjects,
-      authToken,
-      createdAt,
-    ];
+    if (!oldUser) {
+      return res.status(400).json({
+        body: `Error: User not found!`,
+      });
+    }
 
-    await client.execute(createUser, params, {
-      prepare: true,
-      isIdempotent: true,
+    const doc = await userMapper.update({
+      id: userId,
+      schedules: [...oldUser.schedules, schedule],
+      liked_projects: [...oldUser.liked_projects, likedProject],
+      personal_projects: [...oldUser.personal_projects, personalProject],
+      auth_token: token,
     });
 
     res.status(200).json({
       success: true,
-      body: {
-        userId,
-        name,
-        username,
-        schedules: [],
-        likedProjects: [],
-        personalProjects,
-        authToken,
-        createdAt,
-      },
+      body: doc,
     });
   } catch (err) {
     console.log(error);
     return res
       .status(500)
-      .json({ body: `Error: Something went wrong. User not registered!` });
+      .json({ body: `Error: Something went wrong. User details not updated!` });
   }
 };
