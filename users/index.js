@@ -26,6 +26,10 @@ client.on("log", (level, loggerName, message, furtherInfo) => {
   console.log(`${level} - ${loggerName}:  ${message}`);
 });
 
+/**
+ * @param {import("express").Request} req HTTP request context.
+ * @param {import("express").Response} res HTTP response context.
+ */
 exports.createSchema = async (req, res) => {
   console.log("timeuuid in createSchema: " + myuuid);
 
@@ -59,6 +63,10 @@ exports.createSchema = async (req, res) => {
   }
 };
 
+/**
+ * @param {import("express").Request} req HTTP request context.
+ * @param {import("express").Response} res HTTP response context.
+ */
 exports.getUser = async (req, res) => {
   console.log("timeuuid in getUser: " + myuuid);
 
@@ -115,6 +123,10 @@ exports.getUser = async (req, res) => {
   }
 };
 
+/**
+ * @param {import("express").Request} req HTTP request context.
+ * @param {import("express").Response} res HTTP response context.
+ */
 exports.createUser = async (req, res) => {
   console.log("timeuuid in createUser: " + myuuid);
 
