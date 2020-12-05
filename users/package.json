@@ -15,8 +15,11 @@
     "serverless-google-cloudfunctions": "*"
   },
   "dependencies": {
+    "axios": "^0.21.0",
     "cassandra-driver": "^4.6.1",
     "dotenv": "^8.2.0",
+    "passport": "^0.4.1",
+    "passport-github": "^1.1.0",
     "uuid": "^8.3.1"
   }
 }

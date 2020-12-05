@@ -3,7 +3,12 @@
 require("dotenv").config();
 
 const cassandra = require("cassandra-driver");
+const passport = require("passport");
+const GitHubStrategy = require("passport-github").Strategy;
+const axios = require("axios").default;
 const { v4 } = require("uuid");
+
+const { callbackUrl, hosts } = require("./env");
 
 const { USERNAME, PASSWORD } = process.env;
 
@@ -13,7 +18,6 @@ if (!PASSWORD) throw new Error("Environment variable PASSWORD not set");
 // Docs and references
 // https://cassandra.apache.org/doc/latest/cql/ddl.html#create-table
 
-// useful for determining container re-use
 const myuuid = cassandra.types.TimeUuid.now();
 console.log("timeuuid in container startup: " + myuuid);
 
@@ -35,6 +39,100 @@ const mapper = new Mapper(client, {
     Meeting: { tables: ["meetings"], keyspace: "gitmeet" },
   },
 });
+
+passport.use(
+  new GitHubStrategy(
+    {
+      clientID: process.env.GH_CLIENT_ID,
+      clientSecret: process.env.GH_CLIENT_SECRET,
+      callbackURL: `${callbackUrl}/auth/callback`,
+      scope: [
+        "repo:status",
+        "read:org",
+        "notifications",
+        "read:user",
+        "user:email",
+        "read:discussion",
+      ],
+    },
+    async (accessToken, refreshToken, profile, cb) => {
+      const userMapper = mapper.forModel("User");
+
+      const { username, displayName } = profile;
+      const duplicates = await userMapper.findAll({ username });
+
+      if (duplicates.length > 0) {
+        const { auth_token, id, username } = duplicates.first();
+        const needsUpdate = auth_token !== accessToken;
+
+        if (needsUpdate) {
+          await userMapper.update({
+            id,
+            username,
+            auth_token: accessToken,
+          });
+
+          return cb(null, { body: duplicates.first() });
+        }
+        return cb(null, duplicates.first());
+      }
+
+      try {
+        const createUserQuery =
+          `INSERT INTO gitmeet.users (id, 
+        name,
+        username,
+        schedules,
+        liked_projects,
+        personal_projects,
+        auth_token,
+        created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)` + ` IF NOT EXISTS`;
+
+        const userId = v4();
+        const createdAt = new Date();
+
+        const params = [
+          userId,
+          displayName,
+          username,
+          [],
+          [],
+          [],
+          accessToken,
+          createdAt,
+        ];
+
+        const user = await client.execute(createUserQuery, params, {
+          prepare: true,
+          isIdempotent: true,
+        });
+
+        return cb(null, user);
+      } catch (err) {
+        return cb(err, null);
+      }
+    }
+  )
+);
+
+exports.auth = async (req, res, next) => {
+  passport.authenticate("github", (err, user, info) => {
+    if (err) res.status(400).json({ body: "Login failed. Try again!" });
+
+    if (!user) res.json(204).json({ body: "Session expired. Login again!" });
+
+    return res.status(200).json({
+      success: true,
+      body: user,
+    });
+  })(req, res, next);
+};
+
+exports.callback = async (req, res, next) => {
+  const data = req.user;
+  const token = Buffer.from(JSON.stringify(data)).toString("base64");
+  res.redirect(`${hosts[1]}/auth?token=${token}`);
+};
 
 /**
  * @param {import("express").Request} req HTTP request context.
@@ -291,5 +389,63 @@ exports.editUser = async (req, res) => {
     return res
       .status(500)
       .json({ body: `Error: Something went wrong. User details not updated!` });
+  }
+};
+
+/**
+ * @param {import("express").Request} req HTTP request context.
+ * @param {import("express").Response} res HTTP response context.
+ */
+exports.verfiyUser = async (req, res) => {
+  console.log("timeuuid in createUser: " + myuuid);
+
+  if (req.method !== "POST") {
+    return res.status(404).json({ body: "Error: Requested method not found!" });
+  }
+
+  const userMapper = mapper.forModel("User");
+
+  try {
+    const { username, authToken } = req.body;
+
+    if (!username || !authToken) {
+      return res.status(400).json({
+        body: `Error: Required fields are missing. User cannot be verified!`,
+      });
+    }
+
+    const oldUsers = await userMapper.findAll({
+      username,
+      auth_token: authToken,
+    });
+
+    if (oldUsers.length === 0) {
+      return res.status(400).json({
+        success: false,
+        body: `Error: User doesn't exist`,
+      });
+    }
+
+    const { auth_token } = oldUsers.first();
+
+    const isAuthorised = await axios.get("https://api.github.com/user", {
+      headers: {
+        Authorization: `token ${auth_token}`,
+      },
+    });
+
+    if (isAuthorised) {
+      res.status(200).json({
+        success: true,
+        body: "Successfully authenticated",
+      });
+    }
+
+    res.status(400).json({
+      success: false,
+      body: "Token expired. Login again",
+    });
+  } catch {
+    return res.status(500).json({ body: "Token expired. Login again" });
   }
 };
