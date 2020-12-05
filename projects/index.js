@@ -111,7 +111,30 @@ exports.deleteProject = (req, res) => {
  * @param {import("express").Response} res HTTP response context.
  */
 exports.editProject = (req, res) => {
+  /**
+   * Workflow: Client request refresh > POST req here > we fetch data off github > re-write our DB
+   *  - if github returns 404, we'll assume the repo has been deleted
+   * 
+   * Since this requires integration with github API and we also need the user's PAT, the code below
+   * is just mock on how the logic will be
+   */
+  const projectID = req.params.id;
 
+  if (req.method !== 'POST') {
+    return res.status(404).json({ message: 'Error: Requested method not found!' });
+  }
+
+  // Mock starts here
+  try {
+    const { readme, tags, id, ... } = await githubClient(projectID);
+    const updateQuery = `UPDATE ${DATABASE}.projects SET ...... WHERE id = ?`;
+
+    await client.execute(updateQuery, [ ... ], { prepare: true });
+    return res.json({ message: 'Refreshed project details successfully' });
+  } catch (_) {
+    console.error(_);
+    return res.status(404).json({ message: 'Error: Access denied trying to access the repository in github' });
+  }
 };
 
 /**
