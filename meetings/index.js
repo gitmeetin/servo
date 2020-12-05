@@ -30,7 +30,7 @@ client.on('log', (level, loggerName, message, furtherInfo) => {
  * @param {import("express").Request} req HTTP request context.
  * @param {import("express").Response} res HTTP response context.
  */
-exports.createSchema = (req, res) => {
+exports.createSchema = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(404).json({ message: 'Requested method not found!' });
   }
@@ -60,12 +60,22 @@ exports.createSchema = (req, res) => {
  * @param {import("express").Request} req HTTP request context.
  * @param {import("express").Response} res HTTP response context.
  */
-exports.getMeeting = (req, res) => {
+exports.getMeeting = async (req, res) => {
   if (req.method !== 'GET') {
     return res.status(404).json({ message: 'Requested method not found!' });
   }
 
-  //
+  const meetingID = req.params[0];
+
+  try {
+    const selectQuery = `SELECT * FROM ${DATABASE}.projects WHERE id = ?`;
+    const result = (await client.execute(selectQuery, [meetingID], { prepare: true })).first();
+
+    return res.json({ message: 'Found the meeting', body: result });
+  } catch (_) {
+    console.error(_);
+    return res.status(404).json({ message: 'Could not find the meeting' });
+  }
 };
 
 /**
