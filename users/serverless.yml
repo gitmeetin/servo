@@ -44,3 +44,31 @@ functions:
       - http: path
         path: users
         method: get
+  
+  auth:
+    handler: auth
+    events:
+      - http: path
+        path: users
+        method: get
+  
+  callback:
+    handler: callback
+    events:
+      - http: path
+        path: users
+        method: get
+  
+  editUser:
+    handler: editUser
+    events:
+      - http: path
+        path: users
+        method: get
+
+  verfiyUser:
+    handler: verfiyUser
+    events:
+      - http: path
+        path: users
+        method: get
