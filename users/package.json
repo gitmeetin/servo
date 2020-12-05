@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "node test",
-    "debug": "node --inspect node_modules/@google-cloud/functions-framework --target=helloWorld"
+    "debug": "node --inspect node_modules/@google-cloud/functions-framework --target=createSchema"
   },
   "author": "Saurav M. H",
   "license": "MIT",
