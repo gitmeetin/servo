@@ -86,14 +86,26 @@ exports.getProject = (req, res) => {
   }
 };
 
+/**
+ * @param {import("express").Request} req HTTP request context.
+ * @param {import("express").Response} res HTTP response context.
+ */
 exports.deleteProject = (req, res) => {
 
 };
 
+/**
+ * @param {import("express").Request} req HTTP request context.
+ * @param {import("express").Response} res HTTP response context.
+ */
 exports.editProject = (req, res) => {
 
 };
 
+/**
+ * @param {import("express").Request} req HTTP request context.
+ * @param {import("express").Response} res HTTP response context.
+ */
 exports.swipeProject = (req, res) => {
 
 };
