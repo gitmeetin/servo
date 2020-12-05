@@ -63,8 +63,27 @@ exports.createSchema = async (req, res) => {
   }
 };
 
+/**
+ * @param {import("express").Request} req HTTP request context.
+ * @param {import("express").Response} res HTTP response context.
+ */
 exports.getProject = (req, res) => {
+  const projectID = req.params.id;
 
+  if (req.method !== 'GET') {
+    return res.status(404).json({ message: 'Error: Requested method not found!' });
+  }
+
+  try {
+    const selectQuery = `SELECT 
+    id, name, author, readme, location, tags, repo_id, repo_link FROM ${DATABASE}.projects WHERE id = ?`;
+    const projectDetails = (await client.execute(selectQuery, { id: projectID }, { prepare: true })).first();
+
+    return res.json({ body: projectDetails });
+  } catch (_) {
+    console.error(_);
+    return res.status(404).json({ message: `Error: Could not find project with ID ${projectID}` })
+  }
 };
 
 exports.deleteProject = (req, res) => {
