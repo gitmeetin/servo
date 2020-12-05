@@ -31,7 +31,11 @@ client.on('log', (level, loggerName, message, furtherInfo) => {
  * @param {import("express").Response} res HTTP response context.
  */
 exports.createSchema = (req, res) => {
+  if (req.method !== 'POST') {
+    return res.status(404).json({ message: 'Requested method not found!' });
+  }
 
+  //
 };
 
 /**
@@ -39,7 +43,11 @@ exports.createSchema = (req, res) => {
  * @param {import("express").Response} res HTTP response context.
  */
 exports.getMeeting = (req, res) => {
+  if (req.method !== 'GET') {
+    return res.status(404).json({ message: 'Requested method not found!' });
+  }
 
+  //
 };
 
 /**
@@ -47,7 +55,11 @@ exports.getMeeting = (req, res) => {
  * @param {import("express").Response} res HTTP response context.
  */
 exports.createMeeting = (req, res) => {
-  
+  if (req.method !== 'POST') {
+    return res.status(404).json({ message: 'Requested method not found!' });
+  }
+
+  //
 };
 
 /**
@@ -55,5 +67,9 @@ exports.createMeeting = (req, res) => {
  * @param {import("express").Response} res HTTP response context.
  */
 exports.deleteMeeting = (req, res) => {
+  if (req.method !== 'POST') {
+    return res.status(404).json({ message: 'Requested method not found!' });
+  }
 
+  //
 };
