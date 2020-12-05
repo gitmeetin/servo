@@ -22,8 +22,18 @@ const client = new cassandra.Client({
   credentials: { username: USERNAME, password: PASSWORD },
 });
 
+const Mapper = cassandra.mapping.Mapper;
+
 client.on("log", (level, loggerName, message, furtherInfo) => {
   console.log(`${level} - ${loggerName}:  ${message}`);
+});
+
+const mapper = new Mapper(client, {
+  models: {
+    User: { tables: ["users"] },
+    Project: { tables: ["projects"] },
+    Meeting: { tables: ["meetings"] },
+  },
 });
 
 /**
@@ -79,7 +89,8 @@ exports.getUser = async (req, res) => {
   const params = [userId];
 
   try {
-    const getUser = `SELECT 
+    const getUser = `UPDATE users
+      SET 
       id as userId,
       name,
       username,
@@ -138,6 +149,80 @@ exports.createUser = async (req, res) => {
   const keyspace = "gitmeet";
 
   const createUser = `INSERT INTO IF NOT EXISTS ${keyspace}.${table} (id, 
+    name,
+    username,
+    schedules,
+    liked_projects,
+    personal_projects,
+    auth_token,
+    created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+
+  try {
+    const { name, username, personalProjects, authToken } = req.body;
+
+    if (!name || !username || !personalProjects || !authToken) {
+      return res.status(400).json({
+        body: `Error: Required fields are missing. User not created!`,
+      });
+    }
+
+    const userId = v4();
+    const createdAt = new Date();
+
+    const params = [
+      userId,
+      name,
+      username,
+      [],
+      [],
+      personalProjects,
+      authToken,
+      createdAt,
+    ];
+
+    await client.execute(createUser, params, {
+      prepare: true,
+      isIdempotent: true,
+    });
+
+    res.status(200).json({
+      success: true,
+      body: {
+        userId,
+        name,
+        username,
+        schedules: [],
+        likedProjects: [],
+        personalProjects,
+        authToken,
+        createdAt,
+      },
+    });
+  } catch (err) {
+    console.log(error);
+    return res
+      .status(500)
+      .json({ body: `Error: Something went wrong. User not registered!` });
+  }
+};
+
+/**
+ * @param {import("express").Request} req HTTP request context.
+ * @param {import("express").Response} res HTTP response context.
+ */
+exports.editUser = async (req, res) => {
+  console.log("timeuuid in editUser: " + myuuid);
+
+  if (req.method !== "POST") {
+    return res.status(500).json({ body: "Error: Requested method not found!" });
+  }
+
+  const table = "users";
+  const keyspace = "gitmeet";
+  const userMapper = mapper.forModel("User");
+
+
+  const editUser = `INSERT INTO IF NOT EXISTS ${keyspace}.${table} (id, 
     name,
     username,
     schedules,
