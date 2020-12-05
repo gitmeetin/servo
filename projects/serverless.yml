@@ -30,3 +30,27 @@ functions:
       - http: path
         path: projects
         method: post
+  getProject:
+    handler: getProject
+    events:
+      - http: path
+        path: projects
+        method: post
+  deleteProject:
+    handler: deleteProject
+    events:
+      - http: path
+        path: projects
+        method: post
+  editProject:
+    handler: editProject
+    events:
+      - http: path
+        path: projects
+        method: post
+  swipeProject:
+    handler: swipeProject
+    events:
+      - http: path
+        path: projects
+        method: post

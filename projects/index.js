@@ -25,7 +25,7 @@ client.on('log', (level, loggerName, message, furtherInfo) => {
  */
 exports.createSchema = async (req, res) => {
   if (req.method !== 'POST') {
-    return res.status(400).json({ message: 'Error: Requested method not found!' });
+    return res.status(404).json({ message: 'Error: Requested method not found!' });
   }
 
   const createTable = `
@@ -61,4 +61,20 @@ exports.createSchema = async (req, res) => {
       message: `Error: ${DATABASE}.projects couldn't be created`
     });
   }
+};
+
+exports.getProject = (req, res) => {
+
+};
+
+exports.deleteProject = (req, res) => {
+
+};
+
+exports.editProject = (req, res) => {
+
+};
+
+exports.swipeProject = (req, res) => {
+
 };
