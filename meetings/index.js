@@ -1,7 +1,7 @@
 const { v4 } = require('uuid');
 const { Client, TimeUuid } = require('cassandra-driver');
 
-const { USERNAME, PASSWORD, DATABASE } = process.env;
+const { USERNAME, PASSWORD, DATABASE = 'gitmeet' } = process.env;
 
 if (!USERNAME) throw new Error('Environment variable USERNAME not set');
 if (!PASSWORD) throw new Error('Environment variable PASSWORD not set');
