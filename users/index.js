@@ -45,7 +45,7 @@ passport.use(
     {
       clientID: process.env.GH_CLIENT_ID,
       clientSecret: process.env.GH_CLIENT_SECRET,
-      callbackURL: `${callbackUrl}/auth/callback`,
+      callbackURL: callbackUrl,
       scope: [
         "repo:status",
         "read:org",
@@ -72,7 +72,7 @@ passport.use(
             auth_token: accessToken,
           });
 
-          return cb(null, { body: duplicates.first() });
+          return cb(null, duplicates.first());
         }
         return cb(null, duplicates.first());
       }
@@ -115,6 +115,10 @@ passport.use(
   )
 );
 
+/**
+ * @param {import("express").Request} req HTTP request context.
+ * @param {import("express").Response} res HTTP response context.
+ */
 exports.auth = async (req, res, next) => {
   passport.authenticate("github", (err, user, info) => {
     if (err) res.status(400).json({ body: "Login failed. Try again!" });
@@ -128,7 +132,12 @@ exports.auth = async (req, res, next) => {
   })(req, res, next);
 };
 
+/**
+ * @param {import("express").Request} req HTTP request context.
+ * @param {import("express").Response} res HTTP response context.
+ */
 exports.callback = async (req, res, next) => {
+  console.log(req);
   const data = req.user;
   const token = Buffer.from(JSON.stringify(data)).toString("base64");
   res.redirect(`${hosts[1]}/auth?token=${token}`);
@@ -396,7 +405,7 @@ exports.editUser = async (req, res) => {
  * @param {import("express").Request} req HTTP request context.
  * @param {import("express").Response} res HTTP response context.
  */
-exports.verfiyUser = async (req, res) => {
+exports.verifyUser = async (req, res) => {
   console.log("timeuuid in createUser: " + myuuid);
 
   if (req.method !== "POST") {

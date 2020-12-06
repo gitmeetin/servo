@@ -66,8 +66,8 @@ functions:
         path: users
         method: get
 
-  verfiyUser:
-    handler: verfiyUser
+  verifyUser:
+    handler: verifyUser
     events:
       - http: path
         path: users
