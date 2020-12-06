@@ -103,7 +103,7 @@ exports.createMeeting = async (req, res) => {
  * @param {import("express").Request} req HTTP request context.
  * @param {import("express").Response} res HTTP response context.
  */
-exports.deleteMeeting = (req, res) => {
+exports.deleteMeeting = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(404).json({ message: 'Requested method not found!' });
   }

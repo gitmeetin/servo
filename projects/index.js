@@ -73,7 +73,7 @@ exports.createSchema = async (req, res) => {
  * @param {import("express").Request} req HTTP request context.
  * @param {import("express").Response} res HTTP response context.
  */
-exports.getProject = (req, res) => {
+exports.getProject = async (req, res) => {
   const projectID = req.params[0];
 
   if (req.method !== 'GET') {
@@ -96,7 +96,7 @@ exports.getProject = (req, res) => {
  * @param {import("express").Request} req HTTP request context.
  * @param {import("express").Response} res HTTP response context.
  */
-exports.deleteProject = (req, res) => {
+exports.deleteProject = async (req, res) => {
   const projectID = req.params[0];
 
   if (req.method !== 'POST') {
@@ -116,7 +116,7 @@ exports.deleteProject = (req, res) => {
  * @param {import("express").Request} req HTTP request context.
  * @param {import("express").Response} res HTTP response context.
  */
-exports.editProject = (req, res) => {
+exports.editProject = async (req, res) => {
   /**
    * Workflow: Client request refresh > POST req here > we fetch data off github > re-write our DB
    *  - if github returns 404, we'll assume the repo has been deleted
@@ -147,7 +147,7 @@ exports.editProject = (req, res) => {
  * @param {import("express").Request} req HTTP request context.
  * @param {import("express").Response} res HTTP response context.
  */
-exports.swipeProject = (req, res) => {
+exports.swipeProject = async (req, res) => {
   const projectID = req.params[0];
   const { liked , user_id } = req.body;
 
