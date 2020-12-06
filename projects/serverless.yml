@@ -30,6 +30,12 @@ functions:
       - http: path
         path: projects
         method: post
+  createProject:
+    handler: createProject
+    events:
+      - http: path
+        path: projects
+        method: post
   getProject:
     handler: getProject
     events:

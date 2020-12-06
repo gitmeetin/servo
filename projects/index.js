@@ -1,4 +1,6 @@
 const { Client, TimeUuid, mapping: { Mapper } } = require('cassandra-driver');
+const { Octokit } = require('@octokit/core');
+const { default: axios } = require('axios');
 
 const { USERNAME, PASSWORD, DATABASE } = process.env;
 
@@ -46,11 +48,13 @@ exports.createSchema = async (req, res) => {
       name text,
       author text,
       readme text,
-      location text,
+      lat text,
+      long text,
       tags list<text>,
       swipes list<swipes>,
       repo_id text,
       repo_link text,
+      description text,
       PRIMARY KEY(id, repo_id, location)
     )
   `;
@@ -137,6 +141,54 @@ exports.editProject = async (req, res) => {
 
     await client.execute(updateQuery, [ ... ], { prepare: true });
     return res.json({ message: 'Refreshed project details successfully' });
+  } catch (_) {
+    console.error(_);
+    return res.status(404).json({ message: 'Access denied trying to access the repository in github' });
+  }
+};
+
+/**
+ * @param {import("express").Request} req HTTP request context.
+ * @param {import("express").Response} res HTTP response context.
+ */
+exports.createProject = async (req, res) => {
+  if (req.method !== 'POST') {
+    return res.status(404).json({ message: 'Requested method not found!' });
+  }
+
+  const projectMapper = mapper.forModel('Project');
+  const { auth, user_id, username, reponame, lat, long } = req.body;
+
+  if (!auth) return res.status(500).json({ message: 'Github auth token not provided '});
+  if (!user_id) return res.status(500).json({ message: 'User ID not provided' });
+  if (!reponame) return res.status(500).json({ message: 'Reponame not provided' });
+  if (!username) return res.status(500).json({ message: 'Username not provided' });
+  if (!location) return res.status(500).json({ message: 'Location not provided' });
+
+  try {
+    const ocotokit = new Octokit({ auth });
+    const githubResponse = await ocotokit.request('GET /repos/{owner}/{repo}', {
+      owner: username,
+      repo: reponame
+    });
+
+    const { id, full_name, name, description, topics, default_branch, html_url, owner } = githubResponse;
+    const { data: readme } = await axios.get(`https://raw.githubusercontent.com/${full_name}/${default_branch}/README.md`);
+
+    await projectMapper.insert({
+      id, 
+      lat,
+      long,
+      name,
+      author: owner.login,
+      readme,
+      description,
+      tags: topics,
+      repo_id: id,
+      repo_link: html_url,
+    })
+
+    return res.json({ message: 'Project has been added successfully' });
   } catch (_) {
     console.error(_);
     return res.status(404).json({ message: 'Access denied trying to access the repository in github' });
