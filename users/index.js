@@ -72,7 +72,7 @@ passport.use(
             auth_token: accessToken,
           });
 
-          return cb(null, { body: duplicates.first() });
+          return cb(null, duplicates.first());
         }
         return cb(null, duplicates.first());
       }
@@ -137,6 +137,7 @@ exports.auth = async (req, res, next) => {
  * @param {import("express").Response} res HTTP response context.
  */
 exports.callback = async (req, res, next) => {
+  console.log(req);
   const data = req.user;
   const token = Buffer.from(JSON.stringify(data)).toString("base64");
   res.redirect(`${hosts[1]}/auth?token=${token}`);
