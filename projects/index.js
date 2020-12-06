@@ -1,6 +1,7 @@
 const { Client, TimeUuid, mapping: { Mapper } } = require('cassandra-driver');
 const { Octokit } = require('@octokit/core');
 const { default: axios } = require('axios');
+const { v4 } = require('uuid');
 
 const { USERNAME, PASSWORD, DATABASE } = process.env;
 
@@ -121,26 +122,45 @@ exports.deleteProject = async (req, res) => {
  * @param {import("express").Response} res HTTP response context.
  */
 exports.editProject = async (req, res) => {
-  /**
-   * Workflow: Client request refresh > POST req here > we fetch data off github > re-write our DB
-   *  - if github returns 404, we'll assume the repo has been deleted
-   * 
-   * Since this requires integration with github API and we also need the user's PAT, the code below
-   * is just mock on how the logic will be
-   */
-  const projectID = req.params[0];
-
   if (req.method !== 'POST') {
     return res.status(404).json({ message: 'Requested method not found!' });
   }
 
-  // Mock starts here
-  try {
-    const { readme, tags, id, ... } = await githubClient(projectID);
-    const updateQuery = `UPDATE ${DATABASE}.projects SET ...... WHERE id = ?`;
+  const projectID = req.params[0];
+  const projectMapper = mapper.forModel('Project');
+  const { auth, user_id, username, reponame, lat, long } = req.body;
 
-    await client.execute(updateQuery, [ ... ], { prepare: true });
-    return res.json({ message: 'Refreshed project details successfully' });
+  if (!auth) return res.status(500).json({ message: 'Github auth token not provided '});
+  if (!user_id) return res.status(500).json({ message: 'User ID not provided' });
+  if (!reponame) return res.status(500).json({ message: 'Reponame not provided' });
+  if (!username) return res.status(500).json({ message: 'Username not provided' });
+  if (!location) return res.status(500).json({ message: 'Location not provided' });
+  if (!projectID) return res.status(500).json({ message: 'Project ID not provided' });
+
+  try {
+    const ocotokit = new Octokit({ auth });
+    const githubResponse = await ocotokit.request('GET /repos/{owner}/{repo}', {
+      owner: username,
+      repo: reponame
+    });
+
+    const { id, full_name, name, description, topics, default_branch, html_url, owner } = githubResponse;
+    const { data: readme } = await axios.get(`https://raw.githubusercontent.com/${full_name}/${default_branch}/README.md`);
+
+    await projectMapper.update({
+      id: projectID, 
+      lat,
+      long,
+      name,
+      author: owner.login,
+      readme,
+      description,
+      tags: topics,
+      repo_id: id,
+      repo_link: html_url,
+    })
+
+    return res.json({ message: 'Project has been refreshed successfully' });
   } catch (_) {
     console.error(_);
     return res.status(404).json({ message: 'Access denied trying to access the repository in github' });
@@ -176,7 +196,7 @@ exports.createProject = async (req, res) => {
     const { data: readme } = await axios.get(`https://raw.githubusercontent.com/${full_name}/${default_branch}/README.md`);
 
     await projectMapper.insert({
-      id, 
+      id: v4(), 
       lat,
       long,
       name,
