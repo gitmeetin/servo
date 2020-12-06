@@ -1,4 +1,5 @@
-const { Client, TimeUuid, mapping: { Mapper } } = require('cassandra-driver');
+const { v4 } = require('uuid');
+const { Client, TimeUuid } = require('cassandra-driver');
 
 const { USERNAME, PASSWORD, DATABASE } = process.env;
 
@@ -12,14 +13,6 @@ console.log('timeuuid in container startup: ' + myuuid);
 const client = new Client({
   cloud: { secureConnectBundle: '../secure-connect-gitmeet.zip' },
   credentials: { username: USERNAME, password: PASSWORD },
-});
-
-const mapper = new Mapper(client, {
-  models: {
-    User: { tables: ['users'], keyspace: 'gitmeet' },
-    Project: { tables: ['projects'], keyspace: 'gitmeet' },
-    Meeting: { tables: ['meetings'], keyspace: 'gitmeet' },
-  },
 });
 
 client.on('log', (level, loggerName, message, furtherInfo) => {
@@ -82,19 +75,35 @@ exports.getMeeting = async (req, res) => {
  * @param {import("express").Request} req HTTP request context.
  * @param {import("express").Response} res HTTP response context.
  */
-exports.createMeeting = (req, res) => {
+exports.createMeeting = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(404).json({ message: 'Requested method not found!' });
   }
 
-  //
+  const { owner, liker, time } = req.body;
+  const link = 'https://www.dyte.in/session/gitmeet-' + v4();
+
+  try {
+    const createMeetingQuery = `INSERT INTO ${DATABASE}.meetings (id, owner, liker, link, time) WHERE (?, ?, ?, ?, ?)`;
+    const meeting = await client.execute(createMeetingQuery, [v4(), owner, liker, link, time]);
+
+    return res.json({ 
+      message: 'Meeting created successfully',
+      body: meeting
+    });
+  } catch (_) {
+    console.error(_);
+    return res.status(500).json({
+      message: 'Could not create a meeting. Something bad happened and it\'s all because of 2020'
+    });
+  }
 };
 
 /**
  * @param {import("express").Request} req HTTP request context.
  * @param {import("express").Response} res HTTP response context.
  */
-exports.deleteMeeting = (req, res) => {
+exports.deleteMeeting = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(404).json({ message: 'Requested method not found!' });
   }
